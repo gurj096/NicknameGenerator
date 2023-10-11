@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import random
 import yaml
+import time
 #DISCORD INVITE: https://discord.com/api/oauth2/authorize?client_id=1161553117528215552&permissions=201403392&scope=bot
 #Opens yml needed
 with open('enter dir of adjectives.yml', 'r') as file:
