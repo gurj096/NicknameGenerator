@@ -15,37 +15,46 @@ with open('adjectives.yml', 'r') as file:
 intents = discord.Intents.default()
 intents.message_content = True
 #Sets the prefix which will queue the bot to listen in on commands
-bot = commands.Bot(command_prefix='/', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-#Uses .command to initialize bot
+# Uses .command to initialize bot
+# Defines the wake command as '/nickname <arguments>'. Once entered with accompanying string(s) the bot will generate
+# a new nickname for the user if permissions allow
 @bot.command()
-async def nickname(ctx): #Defines the wake command as '/nickname'. Once entered, the bot will respond with "What is your name"
+async def nickname(ctx, *args):
+    # Handle case of empty arguments
+    if len(args) == 0:
+        await ctx.send(f'Invalid name. Please enter a valid name to add a nickname to. See `!help nickname` command for additional info.')
+        return
     
-    await ctx.send('What is your name')
-    print(ctx.author.name)
-    time.sleep(0.5) # To prevent code from looping on itself as there appears to be a delay between running the code and displaying results on Discord
-    while True:
-        try:
-           
-            #while True: #Loop to prompt the user to enter a different name if first char of entered name is not a key in the dictionary
-            name = await bot.wait_for('message') #Bot waits for name from user before continuing
-            name = name.content #Converts name into readable string
-            f_letter_name = name[0].lower() #Gets the first char of string and saves it to a variable
-            adj_list = adjectives[f_letter_name] # Imports list from .yml file associated with variable name
-            random_adj = random.choice(adj_list) # Randomly selects one element from list
-            await ctx.send(f'Your new nickname is {random_adj.title()} {name.title()}') #Outputs new nickname
-            new_nick = f'{random_adj.title()} {name.title()}' #Saves new nickname to a variable
-            break
-        #Tests whether an error will be thrown or not depending on if the f_letter_name variable is a key 
-        except:
-            await ctx.send('Please enter a valid name')
-            time.sleep(1)
-            
-    try:
-        await ctx.author.edit(nick=new_nick) # Tries to change name of author to new nickname
-        await ctx.send(f"Changed your nickname to {new_nick}.") # Sends confirmation 
-    except: await ctx.send('Could not successfully change nickname') # Error message if name could not be changed. (Most likely d/t to Discord's policy of not allowing bots to change names of Admins)
+    # Grab subsequent strings afte command and account for whitespace input
+    user_preferred_name: str = " ".join(args).lower()
 
+    # Use the first character of the name input by user to choose adjective
+    # from a precompiled list of adjectives to use in the generated nickname
+    first_char_of_name = user_preferred_name[0].lower()
+    adjective_set = adjectives[first_char_of_name]
+    chosen_adjective: str = random.choice(adjective_set)
+
+    # Saves new nickname to a variable
+    new_nickname: str = f'{chosen_adjective.title()} {user_preferred_name.title()}'
+
+    await ctx.send(f'Your new nickname is __**{new_nickname}**__')
+
+     
+
+    # Attempt to change the nickname property of the user
+    try:
+        await ctx.author.edit(nick=new_nickname) # Tries to change name of author to new nickname
+        await ctx.send(f"Changed your nickname to {new_nickname}.") # Sends confirmation 
+    except: await ctx.send('Could not successfully change nickname.') # Error message if name could not be changed. (Most likely d/t to Discord's policy of not allowing bots to change names of Admins)
+    
+    # TODO: Bypass roles that prevent nickname changes to persist
+    # 1) Attempt to remove current non-admin roles initially
+    # 2) Store them for re-apply later?
+    # 3) Apply nickname
+    # 4) Re-add roles to user
+    
 
 # Remove provided help command
 bot.remove_command('help')
@@ -56,13 +65,13 @@ bot.remove_command('help')
 async def help(ctx, *args):
     # Handle case of empty arguments -- send message of how to use help command
     if len(args) == 0:
-        await ctx.send(f'Use `/help <command_name>` to see documentation about that command\n__Example__: `/help nickname`')
+        await ctx.send(f'Use `!help <command_name>` to see documentation about that command\n__Example__: `!help nickname`')
         return
     # Check which command to display documentation for
     command: str = args[0].lower()
     match command:
         case "nickname":
-            message: str = '__Usage__: `/nickname`\n__Description__: Changes the server nickname of the user who called the command. After `/nickname` is used, the bot will prompt the user to type in their name and then generate an adjective to be used in their new nickname in the format of `<adjective> <name>`'
+            message: str = '__Usage__: `!nickname <name>`\n__Description__: Changes the server nickname of the user who called the command. After `/nickname` is used, the bot will prompt the user to type in their name and then generate an adjective to be used in their new nickname in the format of `<adjective> <name>`'
             await ctx.send(f'{message}')
         case _:
             await ctx.send(f'No documentation provided for the command / non-existant command input.')
